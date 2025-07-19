@@ -26,7 +26,6 @@ const registrationSuccess = ref(false);
 const successMessage = ref('');
 
 onMounted(() => {
-    console.log('props.flash.status:', props.flash && props.flash.status);
     // URL 파라미터에서 회원가입 성공 메시지 확인
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('registered') === 'true') {
@@ -64,9 +63,6 @@ const submit = () => {
         remember: form.remember ? 'on' : '',
     })).post(route('login'), {
         onFinish: () => form.reset('password'),
-        onError: (errors) => {
-            console.log('로그인 에러:', errors);
-        },
     });
 };
 </script>

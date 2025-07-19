@@ -367,7 +367,7 @@ const handlePhoneInput = (event) => {
                     <div class="flex justify-center space-x-6 text-xs text-purple-300">
                         <button @click="showPrivacyModal = true" class="hover:text-white transition-colors">개인정보 처리방침</button>
                         <button @click="showTermsModal = true" class="hover:text-white transition-colors">서비스 이용약관</button>
-                        <a :href="route('email.preview')" target="_blank" class="hover:text-white transition-colors">📧 이메일 미리보기</a>
+                        <!-- 이메일 미리보기 링크 삭제 -->
                     </div>
                 </div>
             </div>
