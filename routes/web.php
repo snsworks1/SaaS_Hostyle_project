@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\ServerController;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Http\Request;
 
@@ -83,7 +84,35 @@ Route::middleware([
     'verified',
     HandleInertiaRequests::class,
 ])->group(function () {
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    // 서버 선택 페이지 (서버가 있을 때)
+    Route::get('/select-server', [ServerController::class, 'select'])->name('server.select');
+
+    // 서버 상세보기 페이지
+    Route::get('/server/{id}', [ServerController::class, 'show'])->name('server.show');
+
+    // 서버 생성/구매 페이지
+    Route::get('/create-server', [ServerController::class, 'create'])->name('server.create');
+
+    // 서버 생성 폼 제출 시 결제 더미 페이지로 이동
+    Route::post('/create-server/payment-dummy', [ServerController::class, 'paymentDummy'])->name('server.payment.dummy');
+
+    // 서버 생성 처리
+    Route::post('/create-server', [ServerController::class, 'store'])->name('server.store');
+
+    // 환불 관련
+    Route::get('/server/{server}/refund/calculate', [ServerController::class, 'calculateRefundDetails'])->name('server.refund.calculate');
+    Route::post('/server/{server}/refund', [ServerController::class, 'processRefund'])->name('server.refund.process');
+
+    // 대시보드
+    Route::get('/dashboard', [ServerController::class, 'dashboard'])->name('dashboard');
 });
+
+Route::middleware([
+    'auth:sanctum',
+    config('jetstream.auth_session'),
+    'verified',
+    \App\Http\Middleware\HandleInertiaRequests::class,
+])->get('/user/profile', function () {
+    return Inertia::render('Profile/Show');
+})->name('profile.show');
+

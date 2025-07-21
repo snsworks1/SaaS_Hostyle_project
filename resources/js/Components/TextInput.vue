@@ -21,7 +21,7 @@ defineExpose({ focus: () => input.value.focus() });
 <template>
     <input
         ref="input"
-        class="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+        class="bg-white/5 text-white placeholder-white/60 border border-white/30 focus:border-blue-400 focus:ring-blue-400 rounded-lg shadow-sm transition-all"
         :value="modelValue"
         @input="$emit('update:modelValue', $event.target.value)"
     >

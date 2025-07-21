@@ -83,8 +83,8 @@ const submit = () => {
     form.post(route('register'), {
         onFinish: () => form.reset('password', 'password_confirmation'),
         onSuccess: () => {
-            // 회원가입 성공 후 이메일 인증 안내 페이지로 리다이렉트
-            router.visit(route('verification.notice'), {
+            // 회원가입 성공 후 서버 생성 페이지로 리다이렉트
+            router.visit(route('server.create'), {
                 method: 'get',
                 preserveState: false,
                 replace: true

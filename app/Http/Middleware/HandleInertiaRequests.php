@@ -35,12 +35,40 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        return [
-            ...parent::share($request),
+        return array_merge(parent::share($request), [
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
             ],
-        ];
+            'servers' => function () use ($request) {
+                if ($request->user()) {
+                    $userId = $request->user()->id;
+                    $servers = \DB::table('servers')->where('user_id', $userId)->get();
+                    \Log::info('inertia servers', ['user_id' => $userId, 'count' => $servers->count()]);
+                    return $servers
+                        ->map(function($server) {
+                            $createdAt = \Carbon\Carbon::parse($server->created_at);
+                            $expiresAt = $createdAt->copy()->addMonths($server->months);
+                            return [
+                                'id' => $server->id,
+                                'site_name' => $server->site_name,
+                                'domain' => $server->domain,
+                                'region' => $server->region,
+                                'platform' => $server->platform,
+                                'plan' => $server->plan,
+                                'months' => $server->months,
+                                'status' => $server->status,
+                                'created_at' => $server->created_at,
+                                'expires_at' => $expiresAt->format('Y-m-d'),
+                                'days_remaining' => now()->diffInDays($expiresAt, false),
+                            ];
+                        })
+                        ->values()
+                        ->all();
+                }
+                \Log::info('inertia servers', ['user_id' => null]);
+                return [];
+            },
+        ]);
     }
 }

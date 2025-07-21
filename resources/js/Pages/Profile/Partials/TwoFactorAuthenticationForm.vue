@@ -107,143 +107,125 @@ const disableTwoFactorAuthentication = () => {
 <template>
     <ActionSection>
         <template #title>
-            Two Factor Authentication
+            <span class="text-white">2단계 인증</span>
         </template>
-
         <template #description>
-            Add additional security to your account using two factor authentication.
+            <span class="text-white/80">계정 보안을 위해 2단계 인증을 설정할 수 있습니다.</span>
         </template>
-
         <template #content>
-            <h3 v-if="twoFactorEnabled && ! confirming" class="text-lg font-medium text-gray-900">
-                You have enabled two factor authentication.
+            <h3 v-if="twoFactorEnabled && ! confirming" class="text-lg font-bold text-white">
+                2단계 인증이 활성화되어 있습니다.
             </h3>
-
-            <h3 v-else-if="twoFactorEnabled && confirming" class="text-lg font-medium text-gray-900">
-                Finish enabling two factor authentication.
+            <h3 v-else-if="twoFactorEnabled && confirming" class="text-lg font-bold text-white">
+                2단계 인증 활성화 마무리
             </h3>
-
-            <h3 v-else class="text-lg font-medium text-gray-900">
-                You have not enabled two factor authentication.
+            <h3 v-else class="text-lg font-bold text-white">
+                2단계 인증이 비활성화되어 있습니다.
             </h3>
-
-            <div class="mt-3 max-w-xl text-sm text-gray-600">
+            <div class="mt-3 max-w-xl text-sm text-white/80">
                 <p>
-                    When two factor authentication is enabled, you will be prompted for a secure, random token during authentication. You may retrieve this token from your phone's Google Authenticator application.
+                    2단계 인증을 활성화하면 로그인 시 인증 앱에서 생성된 보안 코드를 추가로 입력해야 합니다. Google Authenticator 등에서 QR코드를 스캔하거나 Setup Key를 입력해 주세요.
                 </p>
             </div>
-
             <div v-if="twoFactorEnabled">
                 <div v-if="qrCode">
-                    <div class="mt-4 max-w-xl text-sm text-gray-600">
+                    <div class="mt-4 max-w-xl text-sm text-white/80">
                         <p v-if="confirming" class="font-semibold">
-                            To finish enabling two factor authentication, scan the following QR code using your phone's authenticator application or enter the setup key and provide the generated OTP code.
+                            아래 QR코드를 인증 앱으로 스캔하거나 Setup Key를 입력한 후, 생성된 OTP 코드를 입력해 주세요.
                         </p>
-
                         <p v-else>
-                            Two factor authentication is now enabled. Scan the following QR code using your phone's authenticator application or enter the setup key.
+                            2단계 인증이 활성화되었습니다. 아래 QR코드를 인증 앱으로 스캔하거나 Setup Key를 입력해 주세요.
                         </p>
                     </div>
-
-                    <div class="mt-4 p-2 inline-block bg-white" v-html="qrCode" />
-
-                    <div v-if="setupKey" class="mt-4 max-w-xl text-sm text-gray-600">
+                    <div class="mt-4 p-2 inline-block bg-white rounded-lg" v-html="qrCode" />
+                    <div v-if="setupKey" class="mt-4 max-w-xl text-sm text-white/80">
                         <p class="font-semibold">
                             Setup Key: <span v-html="setupKey"></span>
                         </p>
                     </div>
-
                     <div v-if="confirming" class="mt-4">
-                        <InputLabel for="code" value="Code" />
-
+                        <InputLabel for="code" value="인증 코드" class="text-white" />
                         <TextInput
                             id="code"
                             v-model="confirmationForm.code"
                             type="text"
                             name="code"
-                            class="block mt-1 w-1/2"
+                            class="block mt-1 w-1/2 bg-white/5 text-white placeholder-white/60 border-white/30 rounded-lg"
                             inputmode="numeric"
                             autofocus
                             autocomplete="one-time-code"
                             @keyup.enter="confirmTwoFactorAuthentication"
                         />
-
-                        <InputError :message="confirmationForm.errors.code" class="mt-2" />
+                        <InputError :message="confirmationForm.errors.code" class="mt-2 text-red-300" />
                     </div>
                 </div>
-
                 <div v-if="recoveryCodes.length > 0 && ! confirming">
-                    <div class="mt-4 max-w-xl text-sm text-gray-600">
+                    <div class="mt-4 max-w-xl text-sm text-white/80">
                         <p class="font-semibold">
-                            Store these recovery codes in a secure password manager. They can be used to recover access to your account if your two factor authentication device is lost.
+                            복구 코드를 안전한 곳에 보관하세요. 2단계 인증 기기를 분실했을 때 계정 복구에 사용할 수 있습니다.
                         </p>
                     </div>
-
-                    <div class="grid gap-1 max-w-xl mt-4 px-4 py-4 font-mono text-sm bg-gray-100 rounded-lg">
+                    <div class="grid gap-1 max-w-xl mt-4 px-4 py-4 font-mono text-sm bg-white/10 text-white rounded-lg border border-white/20">
                         <div v-for="code in recoveryCodes" :key="code">
                             {{ code }}
                         </div>
                     </div>
                 </div>
             </div>
-
             <div class="mt-5">
                 <div v-if="! twoFactorEnabled">
                     <ConfirmsPassword @confirmed="enableTwoFactorAuthentication">
-                        <PrimaryButton type="button" :class="{ 'opacity-25': enabling }" :disabled="enabling">
-                            Enable
+                        <PrimaryButton type="button" :class="{ 'opacity-25': enabling }" :disabled="enabling" class="bg-gradient-to-r from-purple-500 to-blue-500 border-0 text-white rounded-lg px-6 py-2">
+                            2단계 인증 활성화
                         </PrimaryButton>
                     </ConfirmsPassword>
                 </div>
-
                 <div v-else>
                     <ConfirmsPassword @confirmed="confirmTwoFactorAuthentication">
                         <PrimaryButton
                             v-if="confirming"
                             type="button"
-                            class="me-3"
+                            class="me-3 bg-gradient-to-r from-purple-500 to-blue-500 border-0 text-white rounded-lg px-6 py-2"
                             :class="{ 'opacity-25': enabling || confirmationForm.processing }"
                             :disabled="enabling || confirmationForm.processing"
                         >
-                            Confirm
+                            인증 완료
                         </PrimaryButton>
                     </ConfirmsPassword>
-
                     <ConfirmsPassword @confirmed="regenerateRecoveryCodes">
                         <SecondaryButton
                             v-if="recoveryCodes.length > 0 && ! confirming"
-                            class="me-3"
+                            class="me-3 bg-white/10 text-white border-white/30 border rounded-lg hover:bg-white/20"
                         >
-                            Regenerate Recovery Codes
+                            복구 코드 재발급
                         </SecondaryButton>
                     </ConfirmsPassword>
-
                     <ConfirmsPassword @confirmed="showRecoveryCodes">
                         <SecondaryButton
                             v-if="recoveryCodes.length === 0 && ! confirming"
-                            class="me-3"
+                            class="me-3 bg-white/10 text-white border-white/30 border rounded-lg hover:bg-white/20"
                         >
-                            Show Recovery Codes
+                            복구 코드 보기
                         </SecondaryButton>
                     </ConfirmsPassword>
-
                     <ConfirmsPassword @confirmed="disableTwoFactorAuthentication">
                         <SecondaryButton
                             v-if="confirming"
                             :class="{ 'opacity-25': disabling }"
                             :disabled="disabling"
+                            class="bg-white/10 text-white border-white/30 border rounded-lg hover:bg-white/20"
                         >
-                            Cancel
+                            취소
                         </SecondaryButton>
                     </ConfirmsPassword>
-
                     <ConfirmsPassword @confirmed="disableTwoFactorAuthentication">
                         <DangerButton
                             v-if="! confirming"
                             :class="{ 'opacity-25': disabling }"
                             :disabled="disabling"
+                            class="bg-red-600 text-white rounded-lg px-6 py-2"
                         >
-                            Disable
+                            2단계 인증 비활성화
                         </DangerButton>
                     </ConfirmsPassword>
                 </div>
