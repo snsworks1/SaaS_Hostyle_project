@@ -2,8 +2,8 @@
     <div class="w-64 bg-white/10 backdrop-blur-xl border-r border-white/20 min-h-screen">
         <nav class="mt-6 px-4">
             <div v-for="(menu, index) in sidebarMenus" :key="index" class="mb-4">
-                <!-- 메인 메뉴 아이템 (플랫폼 조건 체크) -->
-                <div v-if="menu.children && (!menu.platforms || menu.platforms.includes(plan))" class="space-y-2">
+                <!-- 메인 메뉴 아이템 -->
+                <div v-if="menu.children">
                     <button 
                         @click="toggleMenu(index)"
                         class="w-full flex items-center justify-between px-4 py-3 text-left text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 group"
@@ -39,26 +39,20 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
                     </button>
-                    
-                    <!-- 서브메뉴 (플랫폼 조건 체크) -->
+                    <!-- 서브메뉴 -->
                     <div v-show="openMenus.includes(index)" class="ml-8 space-y-1">
-                        <a 
-                            v-for="submenu in menu.children.filter(sub => !sub.platforms || sub.platforms.includes(plan))" 
-                            :key="submenu.title"
-                            :href="submenu.href"
-                            class="block px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
-                        >
-                            {{ submenu.title }}
-                        </a>
+                        <template v-for="submenu in menu.children" :key="submenu.title">
+                            <a v-if="submenu.route" :href="route(submenu.route, { id: serverId })" class="block px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200">
+                                {{ submenu.title }}
+                            </a>
+                            <button v-else-if="submenu.children" @click.stop class="block px-3 py-2 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200 w-full text-left">
+                                {{ submenu.title }}
+                            </button>
+                        </template>
                     </div>
                 </div>
-                
-                <!-- 단일 메뉴 아이템 (플랫폼 조건 체크) -->
-                <a 
-                    v-else-if="!menu.platforms || menu.platforms.includes(plan)"
-                    :href="menu.href"
-                    class="flex items-center px-4 py-3 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200"
-                >
+                <!-- 단일 메뉴 아이템 (route가 있으면 바로 이동) -->
+                <a v-else-if="menu.route" :href="route(menu.route, { id: serverId })" class="flex items-center px-4 py-3 text-white/90 hover:text-white hover:bg-white/10 rounded-lg transition-all duration-200">
                     <div class="w-5 h-5 flex items-center justify-center mr-3">
                         <svg v-if="menu.icon === 'settings'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -81,13 +75,21 @@
                 </a>
             </div>
         </nav>
+        <!-- 업그레이드 안내 모달 -->
+        <div v-if="showUpgradeModal" class="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40">
+            <div class="bg-white rounded-xl shadow-2xl p-8 max-w-xs w-full text-center">
+                <div class="text-lg font-bold mb-4 text-gray-800">플랜 업그레이드 필요</div>
+                <div class="mb-6 text-gray-700">{{ upgradeMessage }}</div>
+                <button @click="closeUpgradeModal" class="bg-gradient-to-r from-purple-500 to-blue-500 text-white px-6 py-2 rounded-lg font-semibold">확인</button>
+            </div>
+        </div>
     </div>
 </template>
 
 <script setup>
 import { ref } from 'vue';
 
-defineProps({
+const props = defineProps({
     sidebarMenus: {
         type: Array,
         default: () => []
@@ -95,10 +97,32 @@ defineProps({
     plan: {
         type: String,
         default: ''
+    },
+    serverId: {
+        type: [String, Number],
+        required: true
     }
 });
 
 const openMenus = ref([]);
+const showUpgradeModal = ref(false);
+const upgradeMessage = ref('');
+
+const planOrder = ['free', 'starter', 'business', 'enterprise'];
+const canAccess = (submenu) => {
+    if (!submenu.minPlan) return true;
+    return planOrder.indexOf(props.plan) >= planOrder.indexOf(submenu.minPlan);
+};
+const handleMenuClick = (submenu, event) => {
+    if (!canAccess(submenu)) {
+        event.preventDefault();
+        upgradeMessage.value = `${submenu.title} 기능은 ${submenu.minPlan} 플랜 이상에서 사용 가능합니다. 플랜을 업그레이드 해주세요.`;
+        showUpgradeModal.value = true;
+    }
+};
+const closeUpgradeModal = () => {
+    showUpgradeModal.value = false;
+};
 
 const toggleMenu = (index) => {
     const menuIndex = openMenus.value.indexOf(index);

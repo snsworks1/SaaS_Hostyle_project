@@ -409,54 +409,87 @@ class ServerController extends Controller
         ]);
     }
 
+    public function renderWithServerProps($id, $vuePage)
+    {
+        $server = \DB::table('servers')
+            ->where('id', $id)
+            ->where('user_id', \Auth::id())
+            ->first();
+
+        if (!$server) {
+            abort(404);
+        }
+
+        $allServers = \DB::table('servers')
+            ->where('user_id', \Auth::id())
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function($s) {
+                $createdAt = \Carbon\Carbon::parse($s->created_at);
+                $expiresAt = $createdAt->copy()->addMonths($s->months);
+                return [
+                    'id' => $s->id,
+                    'site_name' => $s->site_name,
+                    'domain' => $s->domain,
+                    'platform' => $s->platform,
+                    'plan' => $s->plan,
+                    'status' => $s->status,
+                    'expires_at' => $expiresAt->format('Y-m-d'),
+                    'days_remaining' => now()->diffInDays($expiresAt, false),
+                ];
+            });
+
+        $createdAt = \Carbon\Carbon::parse($server->created_at);
+        $expiresAt = $createdAt->copy()->addMonths($server->months);
+        $daysRemaining = now()->diffInDays($expiresAt, false);
+
+        $serverData = [
+            'id' => $server->id,
+            'site_name' => $server->site_name,
+            'domain' => $server->domain,
+            'region' => $server->region,
+            'platform' => $server->platform,
+            'plan' => $server->plan,
+            'months' => $server->months,
+            'status' => $server->status,
+            'created_at' => $server->created_at,
+            'expires_at' => $expiresAt->format('Y-m-d'),
+            'days_remaining' => $daysRemaining,
+        ];
+
+        $sidebarMenus = $this->getSidebarMenusByPlatform($server->platform);
+
+        return Inertia::render($vuePage, [
+            'server' => $serverData,
+            'allServers' => $allServers,
+            'sidebarMenus' => $sidebarMenus
+        ]);
+    }
+
     private function getSidebarMenusByPlatform($platform)
     {
         switch ($platform) {
             case 'cms':
                 return [
                     [
-                        'title' => '사이트 설정',
+                        'title' => '기본설정',
                         'icon' => 'settings',
-                        'children' => [
-                            [
-                                'title' => '기본설정',
-                                'children' => [
-                                    ['title' => '이용약관', 'route' => 'server.settings.terms'],
-                                    ['title' => '사이트이름', 'route' => 'server.settings.name'],
-                                    ['title' => '대표 도메인', 'route' => 'server.settings.domain'],
-                                    ['title' => '파비콘', 'route' => 'server.settings.favicon'],
-                                    ['title' => '언어 선택', 'route' => 'server.settings.language'],
-                                    ['title' => '도메인 등록/가이드', 'route' => 'server.settings.domain-guide'],
-                                ]
-                            ],
-                            [
-                                'title' => 'SEO',
-                                'children' => [
-                                    ['title' => 'robot 설정', 'route' => 'server.settings.robot'],
-                                    ['title' => '사이트맵', 'route' => 'server.settings.sitemap'],
-                                    ['title' => '페이지제목', 'route' => 'server.settings.page-title'],
-                                    ['title' => '키워드', 'route' => 'server.settings.keywords'],
-                                    ['title' => '설명', 'route' => 'server.settings.description'],
-                                    ['title' => '메타태그', 'route' => 'server.settings.meta'],
-                                    ['title' => 'OG', 'route' => 'server.settings.og'],
-                                ]
-                            ],
-                            [
-                                'title' => '소셜',
-                                'children' => [
-                                    ['title' => '구글 로그인', 'route' => 'server.settings.google-login'],
-                                    ['title' => '네이버지도', 'route' => 'server.settings.naver-map'],
-                                    ['title' => '카카오지도', 'route' => 'server.settings.kakao-map'],
-                                ]
-                            ],
-                            [
-                                'title' => '추가기능',
-                                'children' => [
-                                    ['title' => '헤더 스크립트', 'route' => 'server.settings.header-script'],
-                                    ['title' => '푸터 스크립트', 'route' => 'server.settings.footer-script'],
-                                ]
-                            ]
-                        ]
+                        'route' => 'server.settings.basic',
+                    ],
+                    [
+                        'title' => 'SEO',
+                        'icon' => 'chart-bar',
+                        'route' => 'server.settings.seo',
+                    ],
+                    [
+                        'title' => '소셜',
+                        'icon' => 'users',
+                        'route' => 'server.settings.social',
+                    ],
+                    [
+                        'title' => '추가기능',
+                        'icon' => 'puzzle',
+                        'route' => 'server.settings.extra',
                     ],
                     [
                         'title' => '회원 관리',
@@ -474,21 +507,15 @@ class ServerController extends Controller
                         'children' => [
                             [
                                 'title' => '게시판 관리',
-                                'children' => [
-                                    ['title' => '게시글 관리', 'route' => 'server.board.posts'],
-                                ]
+                                'route' => 'server.board.manage',
                             ],
                             [
                                 'title' => 'FORM 리스트',
-                                'children' => [
-                                    ['title' => 'FORM 응답 리스트', 'route' => 'server.forms.responses'],
-                                ]
+                                'route' => 'server.forms.manage',
                             ],
                             [
-                                'title' => '달력',
-                                'children' => [
-                                    ['title' => '생성된 달력별 일정', 'route' => 'server.calendar.schedules'],
-                                ]
+                                'title' => '달력 리스트',
+                                'route' => 'server.calendar.manage',
                             ]
                         ]
                     ],
@@ -506,11 +533,7 @@ class ServerController extends Controller
                         'children' => [
                             [
                                 'title' => '설정',
-                                'children' => [
-                                    ['title' => 'PHP 버전설정', 'route' => 'server.admin.php-version'],
-                                    ['title' => 'MySQL 패스워드 변경', 'route' => 'server.admin.mysql-password'],
-                                    ['title' => 'MySQL 유저 관리', 'route' => 'server.admin.mysql-users'],
-                                ]
+                                'route' => 'server.admin.settings',
                             ],
                             ['title' => '백업', 'route' => 'server.admin.backup'],
                             ['title' => 'SSL', 'route' => 'server.admin.ssl'],

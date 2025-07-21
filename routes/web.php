@@ -105,6 +105,82 @@ Route::middleware([
 
     // 대시보드
     Route::get('/dashboard', [ServerController::class, 'dashboard'])->name('dashboard');
+
+    // 설정/관리 페이지 라우트 추가
+    Route::get('/server/{id}/settings/basic', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Settings/Basic');
+    })->name('server.settings.basic');
+    Route::get('/server/{id}/settings/seo', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Settings/Seo');
+    })->name('server.settings.seo');
+    Route::get('/server/{id}/settings/social', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Settings/Social');
+    })->name('server.settings.social');
+    Route::get('/server/{id}/settings/extra', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Settings/Extra');
+    })->name('server.settings.extra');
+    Route::get('/server/{id}/settings/domain-guide', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Settings/DomainGuide');
+    })->name('server.settings.domain-guide');
+
+    // 회원관리
+    Route::get('/server/{id}/members/list', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Members/List');
+    })->name('server.members.list');
+    Route::get('/server/{id}/members/template', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Members/Template');
+    })->name('server.members.template');
+    Route::get('/server/{id}/members/settings', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Members/Settings');
+    })->name('server.members.settings');
+    Route::get('/server/{id}/members/points', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Members/Points');
+    })->name('server.members.points');
+
+    // 기능
+    Route::get('/server/{id}/board/manage', fn($id) => Inertia::render('Server/Board/Manage'))->name('server.board.manage');
+    Route::get('/server/{id}/forms/manage', fn($id) => Inertia::render('Server/Forms/Manage'))->name('server.forms.manage');
+    Route::get('/server/{id}/calendar/manage', fn($id) => Inertia::render('Server/Calendar/Manage'))->name('server.calendar.manage');
+
+    // 통계
+    Route::get('/server/{id}/stats/visits', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Stats/Visits');
+    })->name('server.stats.visits');
+    Route::get('/server/{id}/stats/access', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Stats/Access');
+    })->name('server.stats.access');
+
+    // 서버관리
+    Route::get('/server/{id}/admin/php-version', fn($id) => Inertia::render('Server/Admin/PhpVersion'))->name('server.admin.php-version');
+    Route::get('/server/{id}/admin/mysql-password', fn($id) => Inertia::render('Server/Admin/MysqlPassword'))->name('server.admin.mysql-password');
+    Route::get('/server/{id}/admin/mysql-users', fn($id) => Inertia::render('Server/Admin/MysqlUsers'))->name('server.admin.mysql-users');
+    Route::get('/server/{id}/admin/backup', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Admin/Backup');
+    })->name('server.admin.backup');
+    Route::get('/server/{id}/admin/ssl', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Admin/Ssl');
+    })->name('server.admin.ssl');
+    Route::get('/server/{id}/admin/phpmyadmin', fn($id) => Inertia::render('Server/Admin/Phpmyadmin'))->name('server.admin.phpmyadmin');
+    Route::get('/server/{id}/admin/filemanager', fn($id) => Inertia::render('Server/Admin/Filemanager'))->name('server.admin.filemanager');
+    Route::get('/server/{id}/admin/mysql', fn($id) => Inertia::render('Server/Admin/Mysql'))->name('server.admin.mysql');
+    Route::get('/server/{id}/wordpress/themes', fn($id) => Inertia::render('Server/Wordpress/Themes'))->name('server.wordpress.themes');
+    Route::get('/server/{id}/admin/settings', function ($id) {
+        $controller = app(\App\Http\Controllers\ServerController::class);
+        return $controller->renderWithServerProps($id, 'Server/Admin/Settings');
+    })->name('server.admin.settings');
 });
 
 Route::middleware([

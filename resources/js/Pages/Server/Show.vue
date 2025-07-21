@@ -10,7 +10,7 @@
         
         <div class="flex relative z-0">
             <!-- 사이드바 컴포넌트 -->
-            <ServerSidebar :sidebar-menus="sidebarMenus" :plan="server.plan" />
+            <ServerSidebar :sidebar-menus="sidebarMenus" :plan="server.plan" :server-id="server.id" />
 
             <!-- 메인 콘텐츠 -->
             <div class="flex-1 p-8 relative z-0 transition-all duration-300">
