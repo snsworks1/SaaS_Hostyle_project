@@ -151,6 +151,15 @@
 
                 <!-- 오른쪽: 가이드 & 계정 설정 -->
                 <div class="flex items-center space-x-3 flex-shrink-0">
+                    <!-- 관리자 페이지 링크 -->
+                    <template v-if="$page.props.auth && $page.props.auth.user && $page.props.auth.user.is_admin">
+                        <a href="/admin/users" class="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-lg font-semibold shadow hover:from-pink-600 hover:to-purple-600 transition-all duration-200">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v4a1 1 0 001 1h3m10-5h3a1 1 0 011 1v4a1 1 0 01-1 1h-3m-10 4h10m-10 4h10"></path>
+                            </svg>
+                            <span>관리자 페이지</span>
+                        </a>
+                    </template>
                     <!-- 서버 정보 표시 -->
                     <div class="text-right">
                         <div class="text-sm text-white/70">{{ server.days_remaining > 0 ? Math.floor(server.days_remaining) + '일 남음' : '만료됨' }}</div>

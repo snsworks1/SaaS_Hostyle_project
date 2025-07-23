@@ -9,6 +9,10 @@ use App\Models\Server;
 use App\Models\Order;
 use App\Services\TossPaymentService;
 use App\Models\Plan;
+use App\Models\CyberpanelServer;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Hash;
+use App\Services\ServerProvisionService;
 
 class ServerController extends Controller
 {
@@ -18,21 +22,7 @@ class ServerController extends Controller
     public function index()
     {
         $user = Auth::user();
-        
-        // 임시 서버 데이터 (나중에 실제 데이터베이스에서 가져올 예정)
-        $servers = [
-            [
-                'id' => 1,
-                'name' => '내 블로그',
-                'domain' => 'myblog.hostyle.com',
-                'platform' => 'WordPress',
-                'plan' => 'Starter',
-                'status' => '정상',
-                'region' => '서울',
-                'price' => '9,900'
-            ]
-        ];
-
+        $servers = Server::where('user_id', $user->id)->get();
         return Inertia::render('Server/Select', [
             'servers' => $servers
         ]);
@@ -43,24 +33,30 @@ class ServerController extends Controller
      */
     public function create()
     {
-        $plans = Plan::with('features')->get()->map(function($plan) {
+        $plans = \DB::table('plans')->get()->map(function($plan) {
             return [
-                'value' => $plan->name,
+                'id' => $plan->id,
+                'name' => $plan->name,
                 'label' => $plan->label,
-                'price' => number_format($plan->price),
-                'originalPrice' => number_format($plan->price),
-                'trialDays' => $plan->trial_days,
-                'specs' => [
-                    'storage' => $this->getStorageByPlan($plan->name),
-                    'traffic' => $this->getTrafficByPlan($plan->name),
-                    'domains' => $this->getDomainsByPlan($plan->name),
-                    'features' => $plan->features->pluck('name')->toArray()
-                ]
+                'price' => $plan->price,
+                'disk' => $plan->disk,
+                'traffic' => $plan->traffic,
+                'domains' => $plan->domains,
+                'databases' => $plan->databases,
+                'trial_days' => $plan->trial_days,
+                // 필요시 subdomains, emails 등도 추가
             ];
         });
 
+        $features = \DB::table('features')->get();
+        $featurePlan = \DB::table('feature_plan')->get();
+        $regions = CyberpanelServer::where('status', 'active')->pluck('region')->unique()->filter()->values();
+
         return Inertia::render('Server/Create', [
-            'plans' => $plans
+            'plans' => $plans,
+            'features' => $features,
+            'featurePlan' => $featurePlan,
+            'regions' => $regions
         ]);
     }
 
@@ -73,67 +69,28 @@ class ServerController extends Controller
     }
 
     /**
-     * 플랜별 저장공간 반환
-     */
-    private function getStorageByPlan($planName)
-    {
-        $storageMap = [
-            'free' => '1GB',
-            'starter' => '5GB',
-            'business' => '20GB',
-            'enterprise' => '100GB'
-        ];
-        return $storageMap[$planName] ?? '1GB';
-    }
-
-    /**
-     * 플랜별 트래픽 반환
-     */
-    private function getTrafficByPlan($planName)
-    {
-        $trafficMap = [
-            'free' => '10GB/월',
-            'starter' => '150GB/월',
-            'business' => '600GB/월',
-            'enterprise' => '무제한'
-        ];
-        return $trafficMap[$planName] ?? '10GB/월';
-    }
-
-    /**
-     * 플랜별 도메인 수 반환
-     */
-    private function getDomainsByPlan($planName)
-    {
-        $domainsMap = [
-            'free' => '서브도메인',
-            'starter' => '1개',
-            'business' => '5개',
-            'enterprise' => '무제한'
-        ];
-        return $domainsMap[$planName] ?? '서브도메인';
-    }
-
-    /**
-     * 서버 생성 처리
+     * 서버 생성 처리 (실제 생성은 별도 provision 메서드에서 실행)
      */
     public function store(Request $request)
     {
-        // 실제 결제/서버생성은 추후 구현
-        // 여기서 servers 테이블에 더미로 저장
-        \DB::table('servers')->insert([
-            'user_id' => \Auth::id(),
-            'site_name' => $request->site_name,
-            'domain' => $request->domain,
-            'region' => $request->region,
-            'platform' => $request->platform,
-            'plan' => $request->plan,
-            'months' => $request->months,
-            'status' => 'active',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        // 결제 더미 이후, 생성 파라미터를 세션에 저장
+        session(['server_provision_params' => $request->all()]);
         return Inertia::render('Server/Loading');
+    }
+
+    /**
+     * 실제 서버 생성 실행 (로딩 페이지에서 호출)
+     */
+    public function provision(Request $request)
+    {
+        $user = \Auth::user();
+        $params = session('server_provision_params');
+        if (!$params) {
+            return response()->json(['success' => false, 'reason' => '생성 파라미터 없음'], 400);
+        }
+        $result = app(ServerProvisionService::class)->provision($params, $user);
+        // 결과 반환 (프론트에서 성공/실패 처리)
+        return response()->json($result);
     }
 
     /**

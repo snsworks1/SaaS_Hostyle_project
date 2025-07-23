@@ -14,11 +14,13 @@ class Server extends Model
         'user_id',
         'site_name',
         'domain',
+        'fqdn',
         'region',
         'platform',
         'plan',
         'months',
         'expires_at',
+        'cyberpanel_server_id',
         'total_months',
         'total_paid_amount',
         'status'

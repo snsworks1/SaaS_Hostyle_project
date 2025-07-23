@@ -8,6 +8,13 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\ServerController;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use App\Http\Controllers\Admin\AdminUserController;
+use App\Http\Middleware\AdminMiddleware;
+use App\Http\Controllers\Admin\AdminCyberpanelController;
+use Illuminate\Support\Facades\Response;
+use phpseclib3\Net\SSH2;
+use phpseclib3\Crypt\PublicKeyLoader;
 
 // inertia 미들웨어 그룹 (GET 라우트만)
 Route::middleware([HandleInertiaRequests::class])->group(function () {
@@ -98,6 +105,8 @@ Route::middleware([
 
     // 서버 생성 처리
     Route::post('/create-server', [ServerController::class, 'store'])->name('server.store');
+    // 서버 생성 실제 실행 (로딩 페이지에서 호출)
+    Route::post('/create-server/provision', [ServerController::class, 'provision'])->name('server.provision');
 
     // 환불 관련
     Route::get('/server/{server}/refund/calculate', [ServerController::class, 'calculateRefundDetails'])->name('server.refund.calculate');
@@ -191,4 +200,61 @@ Route::middleware([
 ])->get('/user/profile', function () {
     return Inertia::render('Profile/Show');
 })->name('profile.show');
+
+Route::post('/user/password-check', function (Request $request) {
+    $user = auth()->user();
+    $isValid = $user && Hash::check($request->input('password'), $user->password);
+    return response()->json(['valid' => $isValid]);
+})->middleware('auth');
+
+Route::get('/ssh-test', function () {
+    try {
+        $ssh = new \phpseclib3\Net\SSH2('27.102.138.143', 22);
+        $key = \phpseclib3\Crypt\PublicKeyLoader::load(file_get_contents('/var/www/.ssh/id_ed25519'));
+        if (!$ssh->login('root', $key)) {
+            return Response::make('SSH 로그인 실패', 500);
+        }
+        $disk = $ssh->exec('df -h /');
+        $memory = $ssh->exec('free -m');
+
+        // 디스크 파싱
+        $diskLines = explode("\n", trim($disk));
+        $diskData = preg_split('/\s+/', $diskLines[1] ?? '');
+        $diskAvail = $diskData[3] ?? '';
+        $diskUsePercent = $diskData[4] ?? '';
+
+        // 메모리 파싱
+        $memLines = explode("\n", trim($memory));
+        $memData = preg_split('/\s+/', $memLines[1] ?? '');
+        $memAvailable = $memData[6] ?? '';
+
+        $html = "<h2>서버 리소스 현황</h2>";
+        $html .= "<ul>";
+        $html .= "<li>현재 남은 디스크 용량: <b>{$diskAvail}</b></li>";
+        $html .= "<li>현재 디스크 사용률: <b>{$diskUsePercent}</b></li>";
+        $html .= "<li>메모리 available(남은량): <b>{$memAvailable} MB</b></li>";
+        $html .= "</ul>";
+        $html .= "<hr><pre>[원본 디스크 정보]\n$disk\n[원본 메모리 정보]\n$memory</pre>";
+        return Response::make($html);
+    } catch (\Exception $e) {
+        return Response::make('에러: ' . $e->getMessage(), 500);
+    }
+});
+
+Route::middleware(['auth', AdminMiddleware::class])->group(function () {
+    Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users.index');
+    Route::get('/admin/cyberpanel', [AdminCyberpanelController::class, 'index'])->name('admin.cyberpanel.index');
+    Route::post('/admin/cyberpanel', [AdminCyberpanelController::class, 'store'])->name('admin.cyberpanel.store');
+    Route::delete('/admin/cyberpanel/{id}', [AdminCyberpanelController::class, 'destroy'])->name('admin.cyberpanel.destroy');
+    Route::post('/admin/cyberpanel/{id}/test', [AdminCyberpanelController::class, 'testConnection'])->name('admin.cyberpanel.test');
+    Route::post('/admin/cyberpanel/{id}/fetch-users', [AdminCyberpanelController::class, 'fetchUsers'])->name('admin.cyberpanel.fetch-users');
+    Route::get('/admin/user-servers', [\App\Http\Controllers\Admin\AdminUserServerController::class, 'index'])->name('admin.user-servers.index');
+    Route::get('/admin/plans', [\App\Http\Controllers\Admin\AdminPlanController::class, 'index'])->name('admin.plans.index');
+    Route::post('/admin/plans', [\App\Http\Controllers\Admin\AdminPlanController::class, 'store'])->name('admin.plans.store');
+    // sync-cyberpanel 고정 경로를 {id} 라우트보다 위에 둠
+    Route::post('/admin/plans/sync-cyberpanel', [\App\Http\Controllers\Admin\AdminPlanController::class, 'syncCyberpanelPackages'])->name('admin.plans.sync-cyberpanel');
+    Route::put('/admin/plans/{id}', [\App\Http\Controllers\Admin\AdminPlanController::class, 'update'])->name('admin.plans.update');
+    Route::post('/admin/plans/{id}', [\App\Http\Controllers\Admin\AdminPlanController::class, 'update']);
+    Route::delete('/admin/plans/{id}', [\App\Http\Controllers\Admin\AdminPlanController::class, 'destroy'])->name('admin.plans.destroy');
+});
 

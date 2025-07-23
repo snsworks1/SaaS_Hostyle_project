@@ -16,6 +16,8 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('site_name');
             $table->string('domain')->unique();
+            $table->string('fqdn')->nullable();
+            $table->unsignedBigInteger('cyberpanel_server_id')->nullable();
             $table->string('region');
             $table->string('platform');
             $table->string('plan');
@@ -25,21 +27,8 @@ return new class extends Migration
             $table->decimal('total_paid_amount', 10, 2)->default(0);
             $table->enum('status', ['active', 'suspended', 'cancelled'])->default('active');
             $table->timestamps();
-            
             $table->index(['user_id', 'status']);
-        });
-    }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('servers');
-    }
-};
-
-            $table->index(['user_id', 'status']);
+            $table->foreign('cyberpanel_server_id')->references('id')->on('cyberpanel_servers');
         });
     }
 

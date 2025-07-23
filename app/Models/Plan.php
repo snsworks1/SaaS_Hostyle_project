@@ -13,7 +13,13 @@ class Plan extends Model
         'name',
         'label',
         'price',
-        'trial_days'
+        'trial_days',
+        'disk',
+        'traffic',
+        'domains',
+        'subdomains',
+        'databases',
+        'emails'
     ];
 
     public function features()

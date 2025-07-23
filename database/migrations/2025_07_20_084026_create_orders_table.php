@@ -24,21 +24,7 @@ return new class extends Migration
             $table->timestamp('expires_at'); // 해당 주문의 만료일
             $table->json('payment_data')->nullable(); // 토스 결제 응답 데이터
             $table->timestamps();
-            
             $table->index(['server_id', 'order_type']);
-            $table->index(['order_number']);
-        });
-    }
-
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('orders');
-    }
-};
-
             $table->index(['order_number']);
         });
     }
