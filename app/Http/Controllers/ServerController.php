@@ -316,6 +316,32 @@ class ServerController extends Controller
             abort(404);
         }
 
+        // CyberPanel 서버 정보 조회
+        $cyber = \App\Models\CyberpanelServer::find($server->cyberpanel_server_id);
+        $websiteInfo = null;
+        if ($cyber) {
+            $cpUrl = ($cyber->ssl ? 'https' : 'http') . ":{$cyber->host}:{$cyber->api_port}/cloudAPI/";
+            $cpAuth = $cyber->api_token ?: base64_encode($cyber->api_user . ':' . $cyber->api_password);
+            $payload = [
+                'serverUserName' => $cyber->api_user,
+                'controller' => 'fetchWebsites',
+                'websiteName' => $server->domain . '.hostylefree.xyz',
+                'page' => 1
+            ];
+            try {
+                $res = \Http::withHeaders([
+                    'Authorization' => $cpAuth,
+                    'Content-Type' => 'application/json'
+                ])->withOptions(['verify' => false])->post($cpUrl, $payload);
+                if ($res->ok() && ($res['status'] ?? 0)) {
+                    $list = json_decode($res['data'], true);
+                    $websiteInfo = collect($list)->firstWhere('domain', $server->domain . '.hostylefree.xyz');
+                }
+            } catch (\Exception $e) {
+                $websiteInfo = null;
+            }
+        }
+
         // 사용자의 모든 서버 목록 가져오기
         $allServers = \DB::table('servers')
             ->where('user_id', \Auth::id())
@@ -324,7 +350,6 @@ class ServerController extends Controller
             ->map(function($s) {
                 $createdAt = \Carbon\Carbon::parse($s->created_at);
                 $expiresAt = $createdAt->copy()->addMonths($s->months);
-                
                 return [
                     'id' => $s->id,
                     'site_name' => $s->site_name,
@@ -362,8 +387,61 @@ class ServerController extends Controller
         return Inertia::render('Server/Show', [
             'server' => $serverData,
             'allServers' => $allServers,
-            'sidebarMenus' => $sidebarMenus
+            'sidebarMenus' => $sidebarMenus,
+            'websiteInfo' => $websiteInfo,
         ]);
+    }
+
+    /**
+     * CyberPanel fetchWebsiteData API를 호출하여 실시간 서버 통계 반환
+     */
+    public function fetchWebsiteData($id)
+    {
+        $server = \DB::table('servers')
+            ->where('id', $id)
+            ->where('user_id', \Auth::id())
+            ->first();
+
+        if (!$server) {
+            return response()->json(['error' => '서버를 찾을 수 없습니다.'], 404);
+        }
+
+        $cyber = \App\Models\CyberpanelServer::find($server->cyberpanel_server_id);
+        if (!$cyber) {
+            return response()->json(['error' => 'CyberPanel 서버 정보를 찾을 수 없습니다.'], 404);
+        }
+
+        $cpUrl = ($cyber->ssl ? 'https' : 'http') . "://{$cyber->host}:{$cyber->api_port}/cloudAPI/";
+        $cpAuth = $cyber->api_token ?: base64_encode($cyber->api_user . ':' . $cyber->api_password);
+        $payload = [
+            'serverUserName' => $cyber->api_user,
+            'controller' => 'fetchWebsiteData',
+            'domainName' => $server->domain . '.hostylefree.xyz',
+        ];
+        try {
+            $res = \Http::withHeaders([
+                'Authorization' => $cpAuth,
+                'Content-Type' => 'application/json'
+            ])->withOptions(['verify' => false])->post($cpUrl, $payload);
+            if ($res->ok()) {
+                return response()->json($res->json());
+            } else {
+                \Log::error('CyberPanel API 호출 실패', [
+                    'url' => $cpUrl,
+                    'payload' => $payload,
+                    'status' => $res->status(),
+                    'body' => $res->body()
+                ]);
+                return response()->json(['error' => 'CyberPanel API 호출 실패', 'body' => $res->body()], 500);
+            }
+        } catch (\Exception $e) {
+            \Log::error('CyberPanel API 예외', [
+                'url' => $cpUrl,
+                'payload' => $payload,
+                'exception' => $e->getMessage()
+            ]);
+            return response()->json(['error' => 'CyberPanel API 예외', 'message' => $e->getMessage()], 500);
+        }
     }
 
     public function renderWithServerProps($id, $vuePage)

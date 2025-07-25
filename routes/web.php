@@ -170,6 +170,9 @@ Route::middleware([
         return $controller->renderWithServerProps($id, 'Server/Stats/Access');
     })->name('server.stats.access');
 
+    // 서버 실시간 통계 API (fetchWebsiteData)
+    Route::get('/server/{id}/fetch-website-data', [ServerController::class, 'fetchWebsiteData'])->name('server.fetchWebsiteData');
+
     // 서버관리
     Route::get('/server/{id}/admin/php-version', fn($id) => Inertia::render('Server/Admin/PhpVersion'))->name('server.admin.php-version');
     Route::get('/server/{id}/admin/mysql-password', fn($id) => Inertia::render('Server/Admin/MysqlPassword'))->name('server.admin.mysql-password');
